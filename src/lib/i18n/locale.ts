@@ -134,7 +134,9 @@ export function localeFromTag(tag: unknown): Locale | null {
 
 /** The browser's preferred language, or null when there is no browser. */
 export function browserLocale(): Locale | null {
-  if (typeof navigator === "undefined") return null;
+  // `window`, not `navigator`: Node has defined a global navigator since v21,
+  // so testing that one makes the server answer with its own locale.
+  if (typeof window === "undefined" || typeof navigator === "undefined") return null;
   const list = Array.isArray(navigator.languages) ? navigator.languages : [];
   for (const tag of list) {
     const found = localeFromTag(tag);
