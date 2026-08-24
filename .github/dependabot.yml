@@ -1,0 +1,64 @@
+# Dependency updates. Grouped on purpose: one PR per ecosystem per week beats
+# a dozen single-package PRs nobody reviews.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # Next, React and the type packages that have to move with them. Splitting
+      # these apart produces PRs that cannot pass CI on their own.
+      react-next:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      tooling:
+        patterns:
+          - "typescript"
+          - "tsx"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "@types/node"
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Native module: a major rebuilds against a different SQLite and the
+      # upgrade belongs in a deliberate PR, not an automatic one.
+      - dependency-name: better-sqlite3
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    commit-message:
+      prefix: chore
+      include: scope

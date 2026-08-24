@@ -102,6 +102,19 @@ Verified behaviour:
 
 **Caveat:** the lock is a plain file removed by an `EXIT` trap. If a refresh is `SIGKILL`ed (OOM, `docker kill`) the lock survives, and every later cron refresh aborts until someone deletes `/app/data/refresh.lock`. Watch for repeated `another refresh appears to be running` lines in `refresh.log`. The entrypoint handles the one case that would otherwise be unrecoverable: a lock left behind with no database at all used to make the container fail to boot forever, so it now clears that lock and re-ingests.
 
+## Tests
+
+Unit tests run on Node's own test runner through `tsx`, so there is no test framework in the dependency tree and nothing extra to keep up to date.
+
+```bash
+pnpm test        # 64 tests, ~0.3 s, no server and no database needed
+pnpm typecheck
+```
+
+They cover the parts that are pure logic and expensive to get wrong: every dictionary having the same shape as the Italian one and every parameterised string actually rendering in all 21 languages, CLDR plural categories (Polish few/many, Arabic dual, Romanian's `de` past 20), language-tag resolution including keys inherited from `Object.prototype`, the GTFS service day that rolls over at 04:00, and the polyline codec and snapping tolerance that decide whether a bus is drawn on the road or over a building.
+
+`.github/workflows/ci.yml` runs those three checks on every push and pull request: typecheck, tests, then a production build with no `data/*.db` present, which is also what proves nothing queries the database at build time. Dependency updates arrive weekly, grouped by ecosystem, from `.github/dependabot.yml`.
+
 ## Smoke test
 
 `scripts/smoke.ts` hits every API route against a running server and checks real values, not just status codes: nearby stops sorted by distance and inside the requested radius, `minutesAway` consistent with `arrivalTime` and `generatedAt`, timetable labels matching their `departureSec`, `routeId` filters that do not leak other lines, vehicles inside the Rome bounding box with fixes from the last hour, journey legs that chain end to end and add up to their own summary, and every documented error path returning an `ApiError` body with the right 4xx status.
@@ -117,7 +130,7 @@ PROBUS_URL=https://busfinder.example.com pnpm smoke
 It exits non-zero on the first failing assertion set and prints what it expected. It also ships inside the image:
 
 ```bash
-docker exec probus node_modules/.bin/tsx scripts/smoke.ts http://127.0.0.1:3000
+docker exec busfinder node_modules/.bin/tsx scripts/smoke.ts http://127.0.0.1:3000
 ```
 
 The sync checks write as well as read: they do a full round trip on a random `syncId` and delete it again, so a run leaves nothing behind and can be repeated. The sync routes are rate limited at 60 requests a minute per client, of which 20 may be GETs, and one run spends roughly 20 and 5 of those, so a third run inside the same minute will start seeing 429s.

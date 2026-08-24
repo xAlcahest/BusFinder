@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node, which needs pnpm on PATH to resolve the store cache.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # better-sqlite3 is native and listed in pnpm.onlyBuiltDependencies, so
+      # its build script runs here rather than being silently skipped.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      # Node's own runner over tsx: no test framework, nothing to keep updated.
+      - run: pnpm test
+
+      # No data/*.db in a checkout. The build has to pass without one, which is
+      # also what proves nothing queries the database at build time.
+      - run: pnpm build
+
+  shell:
+    name: deploy scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Warning and up: the remote-expansion notes in deploy.sh are deliberate,
+      # the commands are built locally on purpose.
+      - run: shellcheck --severity=warning scripts/*.sh docker-entrypoint.sh
