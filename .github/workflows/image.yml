@@ -1,0 +1,60 @@
+name: Image
+
+# Separate from ci.yml because of the path filter: building the image compiles
+# better-sqlite3 from source and runs the full Next build, which takes minutes.
+# Only worth it when something that ends up in the image changes. The two path
+# lists are spelled out twice because workflows do not support YAML anchors.
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - docker-entrypoint.sh
+      - docker-compose*.yml
+      - package.json
+      - pnpm-lock.yaml
+      - .dockerignore
+      - .github/workflows/image.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - docker-entrypoint.sh
+      - docker-compose*.yml
+      - package.json
+      - pnpm-lock.yaml
+      - .dockerignore
+      - .github/workflows/image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: docker build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build only, never push. A release goes out through scripts/release.sh
+      # from a machine that holds the registry credentials.
+      - run: docker build --progress=plain --tag busfinder:ci .
+
+      # The reason this job exists. A base-image bump breaks the native module
+      # before it breaks anything else, and it breaks it at runtime, not during
+      # the build. --entrypoint bypasses the entrypoint, which would otherwise
+      # go and ingest the whole feed.
+      - name: the native SQLite binding loads in the runtime image
+        run: |
+          docker run --rm --entrypoint node busfinder:ci -e "
+            const Database = require('better-sqlite3');
+            const db = new Database(':memory:');
+            db.exec('create table t(x)');
+            console.log('better-sqlite3 ok, sqlite', db.prepare('select sqlite_version() v').get().v);
+          "
