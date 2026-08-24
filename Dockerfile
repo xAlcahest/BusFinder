@@ -3,7 +3,7 @@
 # ---- Stage 1: deps + build -------------------------------------------------
 # better-sqlite3 compiles a native binding at install time, so this stage
 # needs a C++ toolchain even though the runtime image does not.
-FROM node:22-slim AS builder
+FROM node:26-slim AS builder
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
@@ -59,7 +59,7 @@ const deadline = Date.now() + 60_000;
 EOF
 
 # ---- Stage 2: runtime -------------------------------------------------------
-FROM node:22-slim AS runner
+FROM node:26-slim AS runner
 
 ENV NODE_ENV=production \
   PORT=3000 \
