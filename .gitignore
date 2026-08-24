@@ -2,8 +2,9 @@ node_modules/
 .next/
 out/
 data/*.db
-data/*.db-journal
-data/*.db-wal
+# -wal, -shm, -journal: SQLite ne crea di nuovi a piacere, quindi la regola
+# li prende tutti invece di elencarli.
+data/*.db-*
 data/*.zip
 data/tmp/
 .env*.local
