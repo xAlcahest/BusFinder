@@ -16,24 +16,24 @@ cd "$(dirname "$0")/.."
 
 for f in .env .env.server; do
   if [ ! -f "$f" ]; then
-    echo "deploy: $f mancante. Vedi DEPLOY.md." >&2
+    echo "deploy: $f is missing. See DEPLOY.md." >&2
     exit 1
   fi
 done
 
 set -a
-# .env porta le impostazioni dell'operatore (SSH); .env.server quelle che
-# viaggiano, e sull'immagine e sul tag deve vincere lui.
+# .env carries the operator's settings (SSH); .env.server carries the ones
+# that travel, and on the image and the tag it is the one that wins.
 # shellcheck disable=SC1091
 . ./.env
 # shellcheck disable=SC1091
 . ./.env.server
 set +a
 
-: "${PROBUS_SSH:?PROBUS_SSH non impostata in .env}"
-: "${PROBUS_IMAGE:?PROBUS_IMAGE non impostata in .env}"
-: "${PROBUS_TAG:?PROBUS_TAG non impostata in .env.server: lancia prima ./scripts/release.sh}"
-: "${PROBUS_URL:?PROBUS_URL non impostata in .env}"
+: "${PROBUS_SSH:?PROBUS_SSH is not set in .env}"
+: "${PROBUS_IMAGE:?PROBUS_IMAGE is not set in .env}"
+: "${PROBUS_TAG:?PROBUS_TAG is not set in .env.server: run ./scripts/release.sh first}"
+: "${PROBUS_URL:?PROBUS_URL is not set in .env}"
 REMOTE_DIR="${PROBUS_REMOTE_DIR:-/opt/busfinder}"
 
 TARGET="${PROBUS_IMAGE}:${PROBUS_TAG}"
@@ -47,30 +47,30 @@ remote() { ssh "${SSH_OPTS[@]}" "$PROBUS_SSH" "$@"; }
 for key in PROBUS_DOMAIN PROBUS_ACME_EMAIL PROBUS_IMAGE; do
   value="$(grep -E "^${key}=" .env.server | head -1 | cut -d= -f2-)"
   if [ -z "$value" ] || case "$value" in *CHANGEME*) true ;; *) false ;; esac; then
-    echo "deploy: ${key} non compilata in .env.server (valore: '${value}')." >&2
+    echo "deploy: ${key} is not filled in in .env.server (value: '${value}')." >&2
     exit 1
   fi
 done
 
-say "server    ${PROBUS_SSH}:${REMOTE_DIR}"
-say "immagine  ${TARGET}"
-say "collaudo  ${PROBUS_URL}"
+say "server  ${PROBUS_SSH}:${REMOTE_DIR}"
+say "image   ${TARGET}"
+say "smoke   ${PROBUS_URL}"
 echo
 
 if ! remote true; then
-  echo "deploy: SSH verso ${PROBUS_SSH} non riuscito. Serve una chiave, non una password." >&2
+  echo "deploy: SSH to ${PROBUS_SSH} failed. It needs a key, not a password." >&2
   exit 1
 fi
 
 # What is running now, so a failed rollout can be undone. Empty on first deploy.
 PREVIOUS="$(remote "docker inspect -f '{{.Config.Image}}' busfinder 2>/dev/null || true" | tr -d '\r')"
 if [ -n "$PREVIOUS" ]; then
-  say "in esecuzione ora: ${PREVIOUS}"
+  say "running now: ${PREVIOUS}"
 else
-  say "primo deploy su questo host"
+  say "first deploy on this host"
 fi
 
-say "invio la configurazione"
+say "sending the configuration"
 remote "mkdir -p '${REMOTE_DIR}'"
 scp "${SSH_OPTS[@]}" -q docker-compose.yml Caddyfile "${PROBUS_SSH}:${REMOTE_DIR}/"
 scp "${SSH_OPTS[@]}" -q .env.server "${PROBUS_SSH}:${REMOTE_DIR}/.env"
@@ -83,10 +83,10 @@ bring_up() {
   remote "cd '${REMOTE_DIR}' && docker compose --profile tls pull --quiet && docker compose --profile tls up -d"
 }
 
-say "scarico e riavvio"
+say "pulling and restarting"
 bring_up
 
-say "attendo che il container sia healthy"
+say "waiting for the container to become healthy"
 healthy=""
 for _ in $(seq 1 60); do
   state="$(remote "docker inspect -f '{{.State.Health.Status}}' busfinder 2>/dev/null || echo none" | tr -d '\r')"
@@ -97,16 +97,16 @@ done
 
 rollback() {
   if [ -z "$PREVIOUS" ]; then
-    echo "deploy: nessuna versione precedente da ripristinare. Il server resta com'è." >&2
+    echo "deploy: no previous version to roll back to. The server stays as it is." >&2
     return
   fi
-  echo "deploy: ripristino ${PREVIOUS}" >&2
+  echo "deploy: rolling back to ${PREVIOUS}" >&2
   old_tag="${PREVIOUS##*:}"
   remote "cd '${REMOTE_DIR}' && sed -i 's|^PROBUS_TAG=.*|PROBUS_TAG=${old_tag}|' .env && docker compose --profile tls up -d" || true
 }
 
 if [ -z "$healthy" ]; then
-  echo "deploy: il container non è diventato healthy." >&2
+  echo "deploy: the container never became healthy." >&2
   remote "docker logs --tail 40 busfinder" >&2 || true
   rollback
   exit 1
@@ -119,19 +119,19 @@ if [ -x node_modules/.bin/tsx ]; then
 elif command -v npx >/dev/null 2>&1; then
   SMOKE=(npx --no-install tsx)
 else
-  echo "deploy: tsx non disponibile, impossibile eseguire il collaudo." >&2
+  echo "deploy: tsx is not available, cannot run the smoke test." >&2
   rollback
   exit 1
 fi
 
-say "collaudo end-to-end su ${PROBUS_URL}"
+say "end-to-end smoke test against ${PROBUS_URL}"
 if "${SMOKE[@]}" scripts/smoke.ts "$PROBUS_URL"; then
-  say "collaudo superato"
+  say "smoke test passed"
 else
-  echo "deploy: il collaudo è fallito sull'URL pubblico." >&2
+  echo "deploy: the smoke test failed against the public URL." >&2
   rollback
   exit 1
 fi
 
 echo
-say "fatto: ${TARGET} è in produzione su ${PROBUS_URL}"
+say "done: ${TARGET} is live at ${PROBUS_URL}"

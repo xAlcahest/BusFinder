@@ -163,7 +163,7 @@ function safeDecode(encoded: string | null): Array<[number, number]> | null {
     const points = decodePolyline(encoded);
     return points.length >= 2 ? points : null;
   } catch (err) {
-    console.warn("Tracciato della tratta non decodificabile:", err);
+    console.warn("Leg shape could not be decoded:", err);
     return null;
   }
 }

@@ -15,34 +15,34 @@ cd "$(dirname "$0")/.."
 
 for f in .env .env.server; do
   if [ ! -f "$f" ]; then
-    echo "release: $f mancante. Vedi DEPLOY.md." >&2
+    echo "release: $f is missing. See DEPLOY.md." >&2
     exit 1
   fi
 done
 
 set -a
-# .env.server dopo .env: il riferimento al registry appartiene alla
-# configurazione del server, non a quella locale, e deve vincere.
+# .env.server after .env: the registry reference belongs to the server's
+# configuration, not to the local one, and has to win.
 # shellcheck disable=SC1091
 . ./.env
 # shellcheck disable=SC1091
 . ./.env.server
 set +a
 
-: "${PROBUS_IMAGE:?PROBUS_IMAGE non impostata in .env}"
+: "${PROBUS_IMAGE:?PROBUS_IMAGE is not set in .env}"
 PLATFORM="${PROBUS_PLATFORM:-linux/amd64}"
 
 case "$PROBUS_IMAGE" in
   *CHANGEME*)
-    echo "release: PROBUS_IMAGE in .env.server è ancora il segnaposto." >&2
+    echo "release: PROBUS_IMAGE in .env.server is still the placeholder." >&2
     exit 1
     ;;
   */*) ;;
   *)
-    # Un nome nudo finirebbe su Docker Hub con l'utente sbagliato, dopo aver
-    # però già speso l'intera build.
-    echo "release: PROBUS_IMAGE ('$PROBUS_IMAGE') non è un riferimento a un registry." >&2
-    echo "         Attesa una forma tipo ghcr.io/utente/busfinder." >&2
+    # A bare name would land on Docker Hub under the wrong user, after the
+    # whole build has already been spent.
+    echo "release: PROBUS_IMAGE ('$PROBUS_IMAGE') is not a registry reference." >&2
+    echo "         Expected something like ghcr.io/user/busfinder." >&2
     exit 1
     ;;
 esac
@@ -63,9 +63,9 @@ STAMP="$(date -u +%Y%m%d-%H%M)"
 HASH="$(tree_hash)"
 VERSION="${STAMP}-${HASH}"
 
-echo "release: immagine   ${PROBUS_IMAGE}"
-echo "release: versione   ${VERSION}"
-echo "release: piattaforma ${PLATFORM}"
+echo "release: image      ${PROBUS_IMAGE}"
+echo "release: version    ${VERSION}"
+echo "release: platform   ${PLATFORM}"
 echo
 
 # --provenance=false keeps the pushed artifact a plain image: the attestation
@@ -87,6 +87,6 @@ else
 fi
 
 echo
-echo "release: pubblicata ${PROBUS_IMAGE}:${VERSION}"
-echo "release: PROBUS_TAG aggiornata in .env.server"
-echo "release: ora  ./scripts/deploy.sh"
+echo "release: published ${PROBUS_IMAGE}:${VERSION}"
+echo "release: PROBUS_TAG updated in .env.server"
+echo "release: next  ./scripts/deploy.sh"

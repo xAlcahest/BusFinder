@@ -49,7 +49,7 @@ function writeExpanded(value: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEYS.syncPanel, value ? "1" : "0");
   } catch (err) {
-    console.warn("[probus] preferenza del pannello sync non salvata", err);
+    console.warn("[probus] sync panel preference not saved", err);
   }
 }
 

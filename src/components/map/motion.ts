@@ -68,7 +68,7 @@ function safePath(encoded: string | null): RoutePath | null {
   try {
     return buildPath(decodePolyline(encoded));
   } catch (err) {
-    console.warn("Tracciato linea non decodificabile:", errorMessage(err));
+    console.warn("Route shape could not be decoded:", errorMessage(err));
     return null;
   }
 }
@@ -232,7 +232,7 @@ async function loadHints(routeIds: string[]): Promise<void> {
     hintStats.failed += 1;
     // Hints are an optimisation. Losing them costs prediction quality and
     // nothing else, so this never reaches the user.
-    console.warn("Velocita apprese non disponibili:", errorMessage(err));
+    console.warn("Learned speeds unavailable:", errorMessage(err));
   } finally {
     window.clearTimeout(guard);
     hintInFlight = false;

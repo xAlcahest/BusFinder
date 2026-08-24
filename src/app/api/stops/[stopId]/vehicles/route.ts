@@ -134,7 +134,7 @@ function directionHeadsign(routeId: string, directionId: number): string | null 
       if (typeof raw === "string" && raw.length > 0) value = raw;
     }
   } catch (cause) {
-    console.error("[api:stop-vehicles] capolinea non risolto", cause);
+    console.error("[api:stop-vehicles] terminus not resolved", cause);
   }
   // Cache the miss too: a route with no headsign must not requery every poll.
   headsignCache.set(key, value);

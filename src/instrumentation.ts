@@ -12,6 +12,6 @@ export async function register(): Promise<void> {
     startPoller();
   } catch (cause) {
     // A dead poller must never stop the server from booting.
-    console.error("[instrumentation] avvio del poller realtime fallito", cause);
+    console.error("[instrumentation] realtime poller failed to start", cause);
   }
 }

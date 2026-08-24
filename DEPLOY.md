@@ -1,170 +1,173 @@
 # Deploy
 
-Due comandi. `release.sh` costruisce e pubblica l'immagine, `deploy.sh` la porta
-sul server e la collauda. Il server non compila e non vede mai i sorgenti:
-scarica un'immagine già pronta, la stessa che hai provato qui.
+Two commands. `release.sh` builds and publishes the image, `deploy.sh` ships it
+to the server and smoke-tests it. The server never compiles and never sees the
+source: it pulls a ready-made image, the same one you tried here.
 
 ```
-./scripts/release.sh     # costruisce, pubblica, e fissa PROBUS_TAG in .env
-./scripts/deploy.sh      # aggiorna il server, aspetta healthy, collauda, e in caso rimette indietro
+./scripts/release.sh     # builds, publishes, and pins PROBUS_TAG in .env.server
+./scripts/deploy.sh      # updates the server, waits for healthy, smoke-tests, rolls back on failure
 ```
 
 ---
 
-## I file
+## The files
 
-| file | a cosa serve |
+| file | what it is for |
 |---|---|
-| `docker-compose.yml` | lo stack. Stesso file qui e sul server; cambia solo il `.env` |
-| `docker-compose.build.yml` | overlay per costruire in locale invece di scaricare |
-| `Caddyfile` | HTTPS con certificato automatico. Serve solo sul server |
-| `.env` | questa macchina |
-| `.env.server` | il server. `deploy.sh` lo copia là come `.env` |
-| `.env.example` | tutte le variabili, spiegate |
+| `docker-compose.yml` | the stack. Same file here and on the server; only `.env` differs |
+| `docker-compose.build.yml` | overlay for building locally instead of pulling |
+| `Caddyfile` | HTTPS with an automatic certificate. Only needed on the server |
+| `.env` | this machine |
+| `.env.server` | the server. `deploy.sh` copies it over as `.env` |
+| `.env.example` | every variable, explained |
 
-`.env` e `.env.server` non entrano nell'immagine: `.dockerignore` li esclude.
-
----
-
-## Preparazione, una volta sola
-
-**1. Il registry.** Serve un posto da cui il server scarica. Con GitHub
-Container Registry basta un token con permesso `write:packages`:
-
-```
-echo "$TOKEN" | docker login ghcr.io -u TUO_UTENTE --password-stdin
-```
-
-Poi in `.env.server` metti `PROBUS_IMAGE=ghcr.io/TUO_UTENTE/busfinder`, e la
-stessa riga in `.env` perché `release.sh` legge da lì dove pubblicare.
-
-Un pacchetto su GHCR nasce privato: o lo rendi pubblico dalle impostazioni del
-pacchetto, oppure fai `docker login ghcr.io` anche sul server.
-
-**2. L'architettura del server.** `PROBUS_PLATFORM` in `.env` deve descrivere
-il **server**, non questa macchina. Un VPS Ampere o Graviton è `linux/arm64` e
-un'immagine amd64 lì non parte. Nel dubbio:
-
-```
-ssh TUO_SERVER uname -m     # x86_64 → linux/amd64 · aarch64 → linux/arm64
-```
-
-**3. Il DNS.** Il record A (e AAAA se hai IPv6) del dominio deve già puntare al
-server, e le porte 80 e 443 devono essere raggiungibili, prima del primo
-deploy: Caddy prende il certificato all'avvio e Let's Encrypt concede cinque
-tentativi a settimana per dominio.
-
-**4. `.env.server`.** Compila `PROBUS_IMAGE`, `PROBUS_DOMAIN`,
-`PROBUS_ACME_EMAIL` e `PROBUS_CONTACT`. `deploy.sh` si rifiuta di partire se
-trovi ancora i segnaposto `CHANGEME`.
-
-**5. Il server.** Servono solo Docker e il plugin compose. `deploy.sh` crea da
-sé `PROBUS_REMOTE_DIR` e ci copia dentro configurazione e `.env`. L'accesso SSH
-deve essere a chiave: lo script è non interattivo e non chiede password.
+`.env` and `.env.server` never enter the image: `.dockerignore` excludes them.
 
 ---
 
-## Cosa succede a ogni deploy
+## One-time setup
 
-`deploy.sh` in ordine:
+**1. The registry.** You need somewhere for the server to pull from. With
+GitHub Container Registry a token with `write:packages` is enough:
 
-1. rifiuta di partire se `.env.server` ha ancora dei `CHANGEME`;
-2. annota quale immagine sta girando adesso, per poterci tornare;
-3. copia `docker-compose.yml`, `Caddyfile` e `.env.server` sul server — solo
-   configurazione, mai sorgenti;
-4. scarica la nuova immagine e riavvia;
-5. aspetta fino a cinque minuti che il container diventi `healthy`;
-6. lancia `scripts/smoke.ts` contro l'URL pubblico: diciotto controlli su tutte
-   le route, compreso un giro completo di scrittura e cancellazione sulla
-   sincronizzazione;
-7. se il container non diventa sano o il collaudo fallisce, **rimette
-   l'immagine precedente** e esce con errore.
+```
+echo "$TOKEN" | docker login ghcr.io -u YOUR_USER --password-stdin
+```
 
-Il primo deploy non ha nulla da ripristinare e lo dice.
+Then put `PROBUS_IMAGE=ghcr.io/YOUR_USER/busfinder` in `.env.server`, which is
+where `release.sh` reads the destination from.
+
+A GHCR package starts out private: either make it public from the package
+settings, or run `docker login ghcr.io` on the server too.
+
+**2. The server's architecture.** `PROBUS_PLATFORM` in `.env` describes the
+**server**, not this machine. An Ampere or Graviton VPS is `linux/arm64` and an
+amd64 image will not start there. When in doubt:
+
+```
+ssh YOUR_SERVER uname -m     # x86_64 → linux/amd64 · aarch64 → linux/arm64
+```
+
+**3. DNS.** The domain's A record (and AAAA if you have IPv6) must already
+point at the server, and ports 80 and 443 must be reachable, before the first
+deploy: Caddy fetches the certificate at startup and Let's Encrypt allows five
+attempts per week per domain.
+
+**4. `.env.server`.** Fill in `PROBUS_IMAGE`, `PROBUS_DOMAIN`,
+`PROBUS_ACME_EMAIL` and `PROBUS_CONTACT`. `deploy.sh` refuses to start if the
+`CHANGEME` placeholders are still there.
+
+**5. The server.** All it needs is Docker and the compose plugin. `deploy.sh`
+creates `PROBUS_REMOTE_DIR` itself and copies the configuration and `.env` into
+it. SSH access has to be key-based: the script is non-interactive and will not
+prompt for a password.
 
 ---
 
-## Il primo avvio è lento
+## What happens on every deploy
 
-Al primo boot, o dopo aver svuotato `data/`, l'entrypoint ingerisce il GTFS
-prima ancora di mettersi in ascolto: circa 214 MB di `stop_times.txt`, diversi
-minuti. Per questo l'healthcheck ha uno `start-period` di dieci minuti e
-`deploy.sh` aspetta fino a cinque. Su un VPS piccolo può volerci di più: se il
-primo deploy fallisce per timeout, il container probabilmente sta ancora
-ingerendo. Guarda `docker logs -f busfinder` prima di concludere che è rotto.
+`deploy.sh`, in order:
 
-Il limite di memoria è `2g`. Sotto circa `1.5g` l'ingest rischia di essere
-ucciso per OOM a metà.
+1. refuses to start if `.env.server` still contains a `CHANGEME`;
+2. notes which image is running right now, so it can go back to it;
+3. copies `docker-compose.yml`, `Caddyfile` and `.env.server` to the server —
+   configuration only, never source;
+4. pulls the new image and restarts;
+5. waits up to five minutes for the container to become `healthy`;
+6. runs `scripts/smoke.ts` against the public URL: eighteen checks across every
+   route, including a full write-and-delete round trip through sync;
+7. if the container never becomes healthy or the smoke test fails, it **puts
+   the previous image back** and exits non-zero.
+
+The first deploy has nothing to roll back to, and says so.
 
 ---
 
-## I dati
+## The first boot is slow
 
-Tre database in `${PROBUS_DATA}`, montati come bind mount e non come volume
-Docker, apposta: così `docker compose down -v` non può cancellarli.
+On the first boot, or after emptying `data/`, the entrypoint ingests the GTFS
+feed before it even starts listening: roughly 214 MB of `stop_times.txt`,
+several minutes. That is why the healthcheck has a ten-minute `start-period`
+and `deploy.sh` waits up to five. On a small VPS it can take longer: if the
+first deploy fails on a timeout, the container is probably still ingesting.
+Check `docker logs -f busfinder` before concluding it is broken.
 
-| file | se lo perdi |
+The memory limit is `2g`. Below about `1.5g` the ingest risks being OOM-killed
+halfway through.
+
+---
+
+## The data
+
+Three databases in `${PROBUS_DATA}`, mounted as a bind mount and not as a
+Docker volume, deliberately: that way `docker compose down -v` cannot delete
+them.
+
+| file | if you lose it |
 |---|---|
-| `gtfs.db` | si ricostruisce da solo al riavvio, ~400 MB |
-| `motion.db` | si ricostruisce solo osservando il traffico per settimane |
-| `sync.db` | **non si recupera.** Nessun upstream, nessun backup. Contiene i dati cifrati di ogni dispositivo sincronizzato |
+| `gtfs.db` | rebuilds itself on restart, ~400 MB |
+| `motion.db` | only rebuilds by watching traffic for weeks |
+| `sync.db` | **unrecoverable.** No upstream, no backup. It holds the encrypted data of every synced device |
 
-`sync.db` è l'unico che merita un backup vero. È minuscolo:
+`sync.db` is the only one that deserves a real backup. It is tiny:
 
 ```
-ssh TUO_SERVER "cd /opt/busfinder && tar czf - data/sync.db" > sync-$(date +%F).tar.gz
+ssh YOUR_SERVER "cd /opt/busfinder && tar czf - data/sync.db" > sync-$(date +%F).tar.gz
 ```
 
 ---
 
-## HTTPS non è un vezzo
+## HTTPS is not a nicety
 
-`crypto.subtle` esiste solo in contesto sicuro. Su HTTP semplice il browser lo
-toglie, e la sincronizzazione fra dispositivi si disattiva da sola mostrando
-"Non disponibile su questa connessione". È il motivo per cui davanti all'app
-c'è Caddy.
+`crypto.subtle` only exists in a secure context. Over plain HTTP the browser
+takes it away, and device sync disables itself with "Not available on this
+connection". That is why Caddy sits in front of the app.
 
-Il profilo `tls` avvia Caddy; senza profilo parte la sola app, che è come gira
-questa macchina in LAN.
+The `tls` profile starts Caddy; with no profile you get the app alone, which is
+how this machine runs on the LAN.
 
 ---
 
-## In locale
+## Locally
 
 ```
-docker compose up -d                                              # usa l'immagine già costruita
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   # ricostruisce
+docker compose up -d                                              # uses the image already built
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   # rebuilds
 docker compose logs -f app
 ```
 
-Qui `PROBUS_BIND` è `0.0.0.0:3200` perché l'accesso dalla LAN è voluto. Sul
-server è `127.0.0.1:3200`: dall'esterno si passa da Caddy, mai dritti sull'app.
+Here `PROBUS_BIND` is `0.0.0.0:3200` because LAN access is wanted. On the
+server it is `127.0.0.1:3200`: from outside you go through Caddy, never
+straight at the app.
 
 ---
 
-## Se qualcosa va storto
+## When something goes wrong
 
-**Il collaudo fallisce e il rollback riparte.** L'immagine vecchia torna su da
-sola. Guarda cosa dice il collaudo: se si lamenta di `/api/vehicles` o
-`/api/alerts` probabilmente è il feed di Roma a non rispondere, non il tuo
-deploy.
+**The smoke test fails and the rollback kicks in.** The old image comes back on
+its own. Read what the smoke test says: if it complains about `/api/vehicles`
+or `/api/alerts`, it is probably Rome's feed not answering, not your deploy.
 
-**Il certificato non arriva.** `docker compose logs caddy`. Quasi sempre è il
-DNS che non punta ancora qui, o la 80 chiusa dal firewall del provider.
+**The certificate never arrives.** `docker compose logs caddy`. Almost always
+it is DNS not pointing here yet, or port 80 closed by the provider's firewall.
 
-**Rollback a mano**, se ti serve una versione specifica:
+**Manual rollback**, if you need a specific version:
 
 ```
-ssh TUO_SERVER "cd /opt/busfinder && sed -i 's|^PROBUS_TAG=.*|PROBUS_TAG=LA_VERSIONE|' .env && docker compose --profile tls up -d"
+ssh YOUR_SERVER "cd /opt/busfinder && sed -i 's|^PROBUS_TAG=.*|PROBUS_TAG=THE_VERSION|' .env && docker compose --profile tls up -d"
 ```
 
-I tag sono `AAAAMMGG-hhmm-<impronta>`: l'impronta è dei sorgenti, quindi due
-build identiche danno lo stesso hash e si riconoscono a colpo d'occhio.
+Tags are `YYYYMMDD-hhmm-<fingerprint>`: the fingerprint is of the source tree,
+so two identical builds give the same hash and are recognisable at a glance.
 
 ---
 
-## Una cosa che manca
+## Before you release
 
-Non c'è controllo di versione: questa cartella non è un repository git. Il
-deploy non ne ha bisogno, ma senza git non esiste storia delle modifiche né un
-modo di tornare indietro nel codice — solo alle immagini già pubblicate.
+`release.sh` fingerprints the working tree, not a commit, so uncommitted
+changes ship too. Run the checks first, the same ones CI runs:
+
+```
+pnpm typecheck && pnpm test && pnpm build
+```

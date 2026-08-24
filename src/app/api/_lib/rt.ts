@@ -30,7 +30,7 @@ export function ensurePoller(): void {
     startPoller();
   } catch (cause) {
     pollerFailed = true;
-    console.error("[api:rt] avvio del poller realtime fallito", cause);
+    console.error("[api:rt] realtime poller failed to start", cause);
   }
 }
 
@@ -38,7 +38,7 @@ export function safeSnapshot(): RealtimeSnapshot {
   try {
     return getSnapshot();
   } catch (cause) {
-    console.error("[api:rt] snapshot realtime non disponibile", cause);
+    console.error("[api:rt] realtime snapshot unavailable", cause);
     return emptySnapshot();
   }
 }
@@ -48,7 +48,7 @@ export function safeRoutesById(): ReadonlyMap<string, RouteSummary> {
   try {
     return allRoutesById();
   } catch (cause) {
-    console.error("[api:rt] elenco linee non disponibile", cause);
+    console.error("[api:rt] route list unavailable", cause);
     return new Map();
   }
 }

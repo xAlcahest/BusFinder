@@ -46,7 +46,7 @@ function safeDecode(encoded: string | null): Array<[number, number]> | null {
   try {
     points = decodePolyline(encoded);
   } catch (err) {
-    console.warn("Polyline non decodificabile:", errorMessage(err));
+    console.warn("Polyline could not be decoded:", errorMessage(err));
     return null;
   }
   if (!Array.isArray(points)) return null;

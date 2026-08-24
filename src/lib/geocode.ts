@@ -281,7 +281,7 @@ export async function geocode(query: string): Promise<GeocodeResult[]> {
       return await askNominatim(trimmed);
     } catch (cause) {
       // Never fatal: the stops table is a complete answer on its own.
-      console.warn("[geocode] Nominatim non raggiungibile:", cause);
+      console.warn("[geocode] Nominatim unreachable:", cause);
       return null;
     }
   });

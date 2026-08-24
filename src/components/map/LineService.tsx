@@ -118,7 +118,7 @@ function useLineSchedule(
         if (cancelled || isAbortError(err) || !mountedRef.current) return;
         // Not worth an error banner: it only costs us the ability to be
         // specific, and the caller degrades to a non-committal sentence.
-        console.warn("Orario della linea non letto:", errorMessage(err));
+        console.warn("Line timetable could not be read:", errorMessage(err));
         setSchedule({ entries: [], failed: true });
       });
 
