@@ -1,0 +1,10 @@
+# Overlay for building on this machine instead of pulling from the registry.
+# The server never uses it: it has no source tree.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile

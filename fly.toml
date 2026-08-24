@@ -1,0 +1,39 @@
+app = "probus-web"
+primary_region = "fra" # Frankfurt: closest Fly region to Rome with a full-size volume tier
+
+[build]
+
+[env]
+  PORT = "3000"
+
+# Holds three databases: gtfs.db, rebuilt daily from the feed; sync.db, every
+# synced device's encrypted data, with no upstream to be restored from; and
+# motion.db, vehicle speeds learned from the realtime feed over weeks.
+# Snapshot this volume. Destroying it loses sync.db for good and costs weeks of
+# relearning for motion.db; only gtfs.db comes back on its own.
+[[mounts]]
+  source = "probus_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  # grace_period matches the Dockerfile HEALTHCHECK start-period: on first boot
+  # the entrypoint ingests the static feed before the server starts listening.
+  # Measured at 20 s on a fast host, so 10 min is margin for a shared CPU.
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "600s"
+    method = "GET"
+    path = "/api/alerts"
+
+# 1 GB: the ingest step parses a 214 MB stop_times.txt and builds indexes in
+# memory before writing SQLite; it peaks well above the default 256 MB.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

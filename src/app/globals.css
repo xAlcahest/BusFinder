@@ -1,0 +1,366 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   BusFinder — design tokens.
+   Identity: a departure board you can hold. Warm travertine paper by day,
+   deep asphalt by night, one signal red borrowed from Rome's own bus livery.
+   --------------------------------------------------------------------------- */
+
+/* Keep `dark:` utilities in step with the theme the settings page forces. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-card: 1.125rem;
+  --radius-chip: 0.625rem;
+}
+
+/* `inline` so utilities emit the raw var() and follow theme switches at runtime. */
+@theme inline {
+  --color-bg: var(--p-bg);
+  --color-surface: var(--p-surface);
+  --color-surface-2: var(--p-surface-2);
+  --color-line: var(--p-border);
+  --color-line-strong: var(--p-border-strong);
+  --color-ink: var(--p-text);
+  --color-muted: var(--p-muted);
+  --color-accent: var(--p-accent);
+  --color-accent-soft: var(--p-accent-soft);
+  --color-on-accent: var(--p-on-accent);
+  --color-live: var(--p-live);
+  --color-live-soft: var(--p-live-soft);
+  --color-late: var(--p-late);
+  --color-late-soft: var(--p-late-soft);
+  --color-early: var(--p-early);
+  --color-danger: var(--p-danger);
+  --color-danger-soft: var(--p-danger-soft);
+}
+
+:root {
+  color-scheme: light;
+
+  --p-bg: #f4f1ea;
+  --p-surface: #ffffff;
+  --p-surface-2: #eae5da;
+  --p-border: #ddd6c7;
+  --p-border-strong: #bdb3a0;
+  --p-text: #14110d;
+  --p-muted: #6a6153;
+  --p-accent: #c1301a;
+  --p-accent-soft: #fae7e2;
+  --p-on-accent: #ffffff;
+  --p-live: #0a7040;
+  --p-live-soft: #e0f2e7;
+  --p-late: #8f4b00;
+  --p-late-soft: #fbeddb;
+  --p-early: #14568f;
+  --p-danger: #a81f16;
+  --p-danger-soft: #fae4e2;
+  --p-focus: #14110d;
+  --p-glow: 193 48 26;
+
+  /* Line badges: fill + foreground pairs, one per GTFS route_type. */
+  --p-tram-bg: #00675b;
+  --p-tram-fg: #ffffff;
+  --p-metro-bg: #cf4318;
+  --p-metro-fg: #ffffff;
+  --p-rail-bg: #38489e;
+  --p-rail-fg: #ffffff;
+  --p-bus-bg: #2c343f;
+  --p-bus-fg: #ffffff;
+
+  --p-shadow: 0 1px 2px rgb(20 17 13 / 0.06), 0 6px 20px -12px rgb(20 17 13 / 0.28);
+  --nav-h: 4.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Shell geometry. Theme-independent, so it lives outside the palette blocks and
+   is overridden per breakpoint below. Pages read these instead of hardcoding.
+   --------------------------------------------------------------------------- */
+:root {
+  /* --- the four shared tokens, fixed by DESKTOP.md ------------------------ */
+  /* Height of the sticky top bar; zero at lg, where the sidebar replaces it. */
+  --shell-header-h: 3.5rem;
+  /* Sidebar column; zero below lg, where the sidebar is a drawer over the page. */
+  --shell-sidebar-w: 0rem;
+  /* Horizontal gutter; `.px-gutter` reads it and clamps it to the safe area. */
+  --shell-pad-x: 1rem;
+  /* Vertical padding the shell applies; zero at lg, where each page owns it. */
+  --shell-pad-y: 1.25rem;
+
+  /* --- derived and page-level tokens -------------------------------------- */
+  /* Reading measure for prose pages (/info, /alerts, /settings). */
+  --measure: 70ch;
+  /* Stacked map height below lg, where the map sits above its list. Viewport
+     relative on purpose: a fixed rem value leaves a tall phone half empty.
+     /stop deliberately runs shorter (38vh): there the arrivals come first. */
+  --map-h: 42vh;
+  --map-h-min: 14rem;
+  /* Full-height map column: viewport minus the header and the shell's padding. */
+  --map-col-h: calc(100dvh - var(--shell-header-h) - 2 * var(--shell-pad-y));
+  /* Stop list column beside a map (/nearby, /line). */
+  --list-col-w: 22rem;
+  /* Arrivals column beside a map (/stop): the point of the page, so wider. */
+  --arrivals-col-w: 26rem;
+  /* Vertical padding inside a list row; a quarter tighter at lg. */
+  --row-py: 0.75rem;
+  /* Gap between page sections. */
+  --section-gap: 2rem;
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --shell-header-h: 0rem;
+    --shell-sidebar-w: 18rem;
+    --shell-pad-x: 1.5rem;
+    --shell-pad-y: 0rem;
+    --row-py: 0.5625rem;
+    --section-gap: 1.75rem;
+  }
+}
+
+@media (min-width: 96rem) {
+  :root {
+    /* Wide screens only: 1.5rem leaves a list touching the edge at 2560. */
+    --shell-pad-x: 2.5rem;
+    --list-col-w: 24rem;
+    --arrivals-col-w: 30rem;
+  }
+}
+
+/* The shell owns the sidebar lane, so the aside follows the token rather than
+   its own utility width and the content offset can never disagree with it. */
+@media (min-width: 64rem) {
+  #barra-laterale {
+    width: var(--shell-sidebar-w);
+    max-width: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --p-bg: #0a0c0f;
+    --p-surface: #14171c;
+    --p-surface-2: #1d222a;
+    --p-border: #272d37;
+    --p-border-strong: #3d4653;
+    --p-text: #f2f0ec;
+    --p-muted: #99a2b0;
+    --p-accent: #ff6a4a;
+    --p-accent-soft: #341510;
+    --p-on-accent: #1c0a05;
+    --p-live: #3ad17c;
+    --p-live-soft: #0d2a1b;
+    --p-late: #f2b232;
+    --p-late-soft: #2d2109;
+    --p-early: #74aef5;
+    --p-danger: #ff7061;
+    --p-danger-soft: #33110e;
+    --p-focus: #f2f0ec;
+    --p-glow: 255 106 74;
+
+    --p-tram-bg: #57d6c3;
+    --p-tram-fg: #06231f;
+    --p-metro-bg: #ff8a5c;
+    --p-metro-fg: #2a0f04;
+    --p-rail-bg: #9aa5ff;
+    --p-rail-fg: #0d1130;
+    --p-bus-bg: #c2ccdb;
+    --p-bus-fg: #11161c;
+
+    --p-shadow: 0 1px 0 rgb(255 255 255 / 0.03);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --p-bg: #0a0c0f;
+  --p-surface: #14171c;
+  --p-surface-2: #1d222a;
+  --p-border: #272d37;
+  --p-border-strong: #3d4653;
+  --p-text: #f2f0ec;
+  --p-muted: #99a2b0;
+  --p-accent: #ff6a4a;
+  --p-accent-soft: #341510;
+  --p-on-accent: #1c0a05;
+  --p-live: #3ad17c;
+  --p-live-soft: #0d2a1b;
+  --p-late: #f2b232;
+  --p-late-soft: #2d2109;
+  --p-early: #74aef5;
+  --p-danger: #ff7061;
+  --p-danger-soft: #33110e;
+  --p-focus: #f2f0ec;
+  --p-glow: 255 106 74;
+
+  --p-tram-bg: #57d6c3;
+  --p-tram-fg: #06231f;
+  --p-metro-bg: #ff8a5c;
+  --p-metro-fg: #2a0f04;
+  --p-rail-bg: #9aa5ff;
+  --p-rail-fg: #0d1130;
+  --p-bus-bg: #c2ccdb;
+  --p-bus-fg: #11161c;
+
+  --p-shadow: 0 1px 0 rgb(255 255 255 / 0.03);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--p-bg);
+    background-image: radial-gradient(
+      110% 40% at 50% 0%,
+      rgb(var(--p-glow) / 0.07),
+      transparent 62%
+    );
+    background-attachment: fixed;
+    color: var(--p-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--p-focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: var(--p-accent);
+    color: var(--p-on-accent);
+  }
+
+  /* Stop names and headsigns arrive from GTFS in caps: give them room. */
+  .caps-data {
+    letter-spacing: 0.012em;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Gutter grows with the viewport; the safe area still wins in landscape. */
+  .px-gutter {
+    padding-left: max(var(--shell-pad-x), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--shell-pad-x), env(safe-area-inset-right, 0px));
+  }
+
+  /* Caps prose at a readable measure; reading pages opt in, the shell does not. */
+  .measure {
+    max-width: var(--measure);
+  }
+
+  .pb-shell {
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1.5rem);
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .shadow-card {
+    box-shadow: var(--p-shadow);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-pulse-live {
+    animation: probus-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(var(--p-glow) / 0.08) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: probus-shimmer 1.4s linear infinite;
+  }
+
+  .animate-spin-slow {
+    animation: probus-spin 0.9s linear infinite;
+  }
+}
+
+@keyframes probus-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes probus-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes probus-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-pulse-live,
+  .animate-shimmer,
+  .animate-spin-slow {
+    animation: none;
+  }
+}
+
+dialog::backdrop {
+  background: rgb(10 12 15 / 0.62);
+  backdrop-filter: blur(2px);
+}

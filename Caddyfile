@@ -1,0 +1,27 @@
+# Terminates TLS and hands everything to the app. Caddy obtains and renews the
+# certificate on its own; the only prerequisite is that the domain's A/AAAA
+# record already points here and ports 80 and 443 are reachable.
+{
+	email {$PROBUS_ACME_EMAIL}
+}
+
+{$PROBUS_DOMAIN} {
+	encode zstd gzip
+
+	# HTTPS is not cosmetic here: crypto.subtle only exists in a secure
+	# context, and without it device sync is disabled in the browser.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+	}
+
+	# `app` is the compose service name; this never leaves the internal network.
+	reverse_proxy app:3000
+
+	log {
+		output stdout
+		format console
+	}
+}

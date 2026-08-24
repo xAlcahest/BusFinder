@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.omc
+data
+tsconfig.tsbuildinfo
+*.log
+npm-debug.log*
+.env
+.env.*
+!.env.example

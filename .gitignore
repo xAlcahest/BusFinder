@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.zip
+data/tmp/
+.env*.local
+# Contengono dominio, host SSH e recapiti: solo .env.example va versionato.
+.env
+.env.server
+next-env.d.ts
+*.tsbuildinfo

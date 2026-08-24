@@ -1,0 +1,70 @@
+# Production stack. The same file runs on this machine and on the server; only
+# .env differs. It pulls a prebuilt image and never builds: the server has no
+# source tree. To build locally, overlay docker-compose.build.yml.
+#
+#   local:   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#   server:  docker compose --profile tls up -d
+
+services:
+  app:
+    image: ${PROBUS_IMAGE:-busfinder}:${PROBUS_TAG:-latest}
+    # Fixed, so `docker logs busfinder` works the same however it was started.
+    container_name: busfinder
+    restart: unless-stopped
+    # Loopback by default: on a server nothing should reach the app except
+    # Caddy, which talks to it over the compose network as `app:3000`.
+    ports:
+      - "${PROBUS_BIND:-127.0.0.1:3200}:3000"
+    volumes:
+      # Bind mount, not a named volume. Holds three databases:
+      #   gtfs.db   static schedule, rebuilt nightly from the feed, disposable.
+      #   sync.db   every synced device's ciphertext. No upstream, no backup,
+      #             nothing anywhere can recover it. Never delete this file.
+      #   motion.db speeds learned from the realtime feed. Rebuildable only by
+      #             observing traffic again for weeks.
+      # A named volume would let `docker compose down -v` destroy all three.
+      - ${PROBUS_DATA:-./data}:/app/data
+    environment:
+      PROBUS_CONTACT: ${PROBUS_CONTACT:-}
+      PROBUS_GEOCODING: ${PROBUS_GEOCODING:-on}
+    mem_limit: ${PROBUS_MEM_LIMIT:-2g}
+    logging:
+      driver: json-file
+      # Without a cap the realtime poll fills a small VPS disk in weeks.
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: busfinder-caddy
+    restart: unless-stopped
+    # Opt-in: a LAN box without a domain runs the app alone.
+    profiles: ["tls"]
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    # Optional here on purpose: compose interpolates every service, profiles
+    # included, so a required marker would break the app-only local stack.
+    # deploy.sh refuses to ship without them.
+    environment:
+      PROBUS_DOMAIN: ${PROBUS_DOMAIN:-}
+      PROBUS_ACME_EMAIL: ${PROBUS_ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates survive a recreate; losing them means re-issuing and
+      # Let's Encrypt rate-limits that to five per week per domain.
+      - caddy-data:/data
+      - caddy-config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy-data:
+  caddy-config:

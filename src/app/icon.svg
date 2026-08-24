@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BusFinder">
+  <rect width="512" height="512" rx="114" fill="#c1301a" />
+  <rect x="104" y="140" width="304" height="232" rx="26" fill="#ffffff" />
+  <g fill="#c1301a">
+    <rect x="132" y="176" width="80" height="40" rx="11" />
+    <rect x="132" y="238" width="80" height="40" rx="11" />
+    <rect x="132" y="300" width="80" height="40" rx="11" />
+  </g>
+  <g fill="#14110d" fill-opacity="0.88">
+    <rect x="234" y="187" width="146" height="18" rx="9" />
+    <rect x="234" y="249" width="146" height="18" rx="9" />
+    <rect x="234" y="311" width="88" height="18" rx="9" />
+  </g>
+</svg>
