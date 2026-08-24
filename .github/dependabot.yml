@@ -51,6 +51,11 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    ignore:
+      # Node majors move the native ABI better-sqlite3 is compiled against.
+      # Security patches on 22 still arrive; the jump is a deliberate PR.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
