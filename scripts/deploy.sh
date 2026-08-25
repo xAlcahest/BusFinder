@@ -36,6 +36,16 @@ set +a
 : "${PROBUS_URL:?PROBUS_URL is not set in .env}"
 REMOTE_DIR="${PROBUS_REMOTE_DIR:-/opt/busfinder}"
 
+# Two ways to face the internet: our own Caddy (tls profile), or a reverse
+# proxy already on the host that reaches the app over a shared Docker network.
+if [ -n "${PROBUS_PROXY_NETWORK:-}" ]; then
+  COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.proxy.yml)
+  MODE="proxy network ${PROBUS_PROXY_NETWORK}"
+else
+  COMPOSE=(docker compose --profile tls)
+  MODE="caddy on ${PROBUS_DOMAIN:-?}"
+fi
+
 TARGET="${PROBUS_IMAGE}:${PROBUS_TAG}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10)
 
@@ -44,7 +54,8 @@ remote() { ssh "${SSH_OPTS[@]}" "$PROBUS_SSH" "$@"; }
 
 # Caddy needs these and compose cannot demand them without breaking the
 # app-only stack, so this is where a missing domain has to be caught.
-for key in PROBUS_DOMAIN PROBUS_ACME_EMAIL PROBUS_IMAGE; do
+if [ -n "${PROBUS_PROXY_NETWORK:-}" ]; then REQUIRED="PROBUS_IMAGE"; else REQUIRED="PROBUS_DOMAIN PROBUS_ACME_EMAIL PROBUS_IMAGE"; fi
+for key in $REQUIRED; do
   value="$(grep -E "^${key}=" .env.server | head -1 | cut -d= -f2-)"
   if [ -z "$value" ] || case "$value" in *CHANGEME*) true ;; *) false ;; esac; then
     echo "deploy: ${key} is not filled in in .env.server (value: '${value}')." >&2
@@ -54,11 +65,17 @@ done
 
 say "server  ${PROBUS_SSH}:${REMOTE_DIR}"
 say "image   ${TARGET}"
+say "front   ${MODE}"
 say "smoke   ${PROBUS_URL}"
 echo
 
 if ! remote true; then
   echo "deploy: SSH to ${PROBUS_SSH} failed. It needs a key, not a password." >&2
+  exit 1
+fi
+
+if [ -n "${PROBUS_PROXY_NETWORK:-}" ] && ! remote "docker network inspect '${PROBUS_PROXY_NETWORK}' >/dev/null 2>&1"; then
+  echo "deploy: Docker network '${PROBUS_PROXY_NETWORK}' does not exist on ${PROBUS_SSH}." >&2
   exit 1
 fi
 
@@ -72,7 +89,7 @@ fi
 
 say "sending the configuration"
 remote "mkdir -p '${REMOTE_DIR}'"
-scp "${SSH_OPTS[@]}" -q docker-compose.yml Caddyfile "${PROBUS_SSH}:${REMOTE_DIR}/"
+scp "${SSH_OPTS[@]}" -q docker-compose.yml docker-compose.proxy.yml Caddyfile "${PROBUS_SSH}:${REMOTE_DIR}/"
 scp "${SSH_OPTS[@]}" -q .env.server "${PROBUS_SSH}:${REMOTE_DIR}/.env"
 # The tag lives in the local .env; the server's copy must agree with it.
 remote "cd '${REMOTE_DIR}' && (grep -q '^PROBUS_TAG=' .env \
@@ -80,7 +97,7 @@ remote "cd '${REMOTE_DIR}' && (grep -q '^PROBUS_TAG=' .env \
   || echo 'PROBUS_TAG=${PROBUS_TAG}' >> .env)"
 
 bring_up() {
-  remote "cd '${REMOTE_DIR}' && docker compose --profile tls pull --quiet && docker compose --profile tls up -d"
+  remote "cd '${REMOTE_DIR}' && ${COMPOSE[*]} pull --quiet && ${COMPOSE[*]} up -d"
 }
 
 say "pulling and restarting"
@@ -102,7 +119,7 @@ rollback() {
   fi
   echo "deploy: rolling back to ${PREVIOUS}" >&2
   old_tag="${PREVIOUS##*:}"
-  remote "cd '${REMOTE_DIR}' && sed -i 's|^PROBUS_TAG=.*|PROBUS_TAG=${old_tag}|' .env && docker compose --profile tls up -d" || true
+  remote "cd '${REMOTE_DIR}' && sed -i 's|^PROBUS_TAG=.*|PROBUS_TAG=${old_tag}|' .env && ${COMPOSE[*]} up -d" || true
 }
 
 if [ -z "$healthy" ]; then
