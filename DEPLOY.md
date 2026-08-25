@@ -17,6 +17,7 @@ source: it pulls a ready-made image, the same one you tried here.
 |---|---|
 | `docker-compose.yml` | the stack. Same file here and on the server; only `.env` differs |
 | `docker-compose.build.yml` | overlay for building locally instead of pulling |
+| `docker-compose.proxy.yml` | overlay for a server with its own reverse proxy, see step 4 |
 | `Caddyfile` | HTTPS with an automatic certificate. Only needed on the server |
 | `.env` | this machine |
 | `.env.server` | the server. `deploy.sh` copies it over as `.env` |
@@ -54,9 +55,18 @@ point at the server, and ports 80 and 443 must be reachable, before the first
 deploy: Caddy fetches the certificate at startup and Let's Encrypt allows five
 attempts per week per domain.
 
-**4. `.env.server`.** Fill in `PROBUS_IMAGE`, `PROBUS_DOMAIN`,
-`PROBUS_ACME_EMAIL` and `PROBUS_CONTACT`. `deploy.sh` refuses to start if the
-`CHANGEME` placeholders are still there.
+**4. `.env.server`.** Fill in `PROBUS_IMAGE` and `PROBUS_CONTACT`, then pick
+how the app faces the internet:
+
+- *Our own Caddy*: fill in `PROBUS_DOMAIN` and `PROBUS_ACME_EMAIL`. Caddy takes
+  ports 80 and 443 and fetches the certificate itself.
+- *A reverse proxy already on the server* (Nginx Proxy Manager, Traefik,
+  another Caddy): set `PROBUS_PROXY_NETWORK` to the Docker network the proxy
+  uses to reach its services. The app joins it and the proxy is pointed at
+  `busfinder` on port `3000`; the certificate is the proxy's business, and our
+  Caddy is not started at all.
+
+`deploy.sh` refuses to start if a required value is still a `CHANGEME`.
 
 **5. The server.** All it needs is Docker and the compose plugin. `deploy.sh`
 creates `PROBUS_REMOTE_DIR` itself and copies the configuration and `.env` into
@@ -71,11 +81,11 @@ prompt for a password.
 
 1. refuses to start if `.env.server` still contains a `CHANGEME`;
 2. notes which image is running right now, so it can go back to it;
-3. copies `docker-compose.yml`, `Caddyfile` and `.env.server` to the server —
+3. copies the compose files, `Caddyfile` and `.env.server` to the server —
    configuration only, never source;
 4. pulls the new image and restarts;
 5. waits up to five minutes for the container to become `healthy`;
-6. runs `scripts/smoke.ts` against the public URL: eighteen checks across every
+6. runs `scripts/smoke.ts` against the public URL: 47 checks across every
    route, including a full write-and-delete round trip through sync;
 7. if the container never becomes healthy or the smoke test fails, it **puts
    the previous image back** and exits non-zero.

@@ -1,0 +1,17 @@
+# Overlay for a server where a reverse proxy (Nginx Proxy Manager, Traefik,
+# another Caddy) already owns ports 80 and 443 and reaches services over a
+# shared Docker network. The app joins that network and the proxy talks to it
+# as `busfinder:3000`; the `tls` profile stays off.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+
+services:
+  app:
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROBUS_PROXY_NETWORK:?set PROBUS_PROXY_NETWORK to the proxy's Docker network}
