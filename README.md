@@ -2,13 +2,27 @@
 
 [![CI](https://github.com/xAlcahest/BusFinder/actions/workflows/ci.yml/badge.svg)](https://github.com/xAlcahest/BusFinder/actions/workflows/ci.yml) [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
 
-Live arrivals, timetables, line maps, service alerts and an A-to-B planner for Rome public transport, as a single Next.js app.
+**When is my bus coming?** That is the whole question, and BusFinder exists to answer it faster and more honestly than anything else on your phone.
 
-It started as a web clone of the Android app "Probus Rome" and has since grown its own shape: a live vehicle map on every stop page, a desktop layout, and optional encrypted sync between devices.
+Live arrivals, a map where the buses actually move, timetables, line pages, service alerts and an A-to-B planner for Rome's buses, trams and metro, in one self-hosted web app. No accounts, no ads, no analytics, no permissions it does not need. Twenty-one languages. Runs on a small VPS, or on a Raspberry Pi with 4 GB on your shelf.
 
-**This is an unofficial, community project.** It is not affiliated with, endorsed by, or supported by ATAC or Roma Servizi per la Mobilità.
+It is an independent, community project, not affiliated with ATAC or Roma Servizi per la Mobilità. Rome is the first city; other Italian cities that publish GTFS and GTFS-RT feeds are the plan.
 
-There are no accounts and no login. Favourites, recents and settings live in the browser's `localStorage`. If you want the same favourites on your phone and your laptop you can turn on device sync, which uploads an encrypted blob the server has no way to read (see [Device sync](#device-sync)). There are no ads and no analytics.
+## What it does
+
+**Arrivals you can trust.** Every stop page shows the next departures with a live or scheduled label on each one, the delay against the timetable, and the age of the data. When the realtime feed has nothing for a trip you get the scheduled time, clearly marked as such, never a live-looking number that is actually a guess.
+
+**A map where the buses move.** Every stop and line page carries a live map. Vehicle positions are snapped onto the line's real shape, animated between feed updates with dead reckoning, and paced by speeds the server has learned for that line in that part of the city. A bus that has left its route shows up as diverted instead of being glued to a street it is not on. Tap a vehicle to follow it.
+
+**A journey planner that runs on your server, not in someone's cloud.** RAPTOR search over the full network, walking transfers, departure now or at a chosen time, and legs drawn along the real route geometry. Free-text addresses go through OpenStreetMap Nominatim and can be turned off entirely, in which case stops and coordinates still work.
+
+**Timetables, lines and alerts.** Full-day timetables per stop and line, respecting Rome's 04:00 service-day boundary. Line pages with both directions, every stop, and the vehicles on it right now. Service alerts from the official feed, matched to the stops and lines they affect and shown on the pages where they matter.
+
+**Favourites that follow you, without an account.** Favourites, recents and settings live in the browser. Turn on device sync and they are encrypted on the device with a key derived from a code you type on your other phone; the server stores ciphertext it cannot read and holds no identity at all.
+
+**Twenty-one languages, done properly.** Italian, English, Arabic, Bengali, Chinese, Dutch, Filipino, French, German, Hindi, Indonesian, Japanese, Korean, Polish, Portuguese, Romanian, Russian, Spanish, Turkish, Ukrainian and Urdu, with CLDR plural rules and a layout that mirrors correctly in right-to-left scripts. Each language is a chunk loaded on demand, so the other twenty cost nothing to a user who never picks them.
+
+**A real app on every screen.** Mobile-first, one-handed, installable as a PWA. From 1024 px it becomes a desktop app with a persistent sidebar and two-column map pages instead of a stretched phone.
 
 ## Data source and attribution
 
@@ -21,21 +35,21 @@ Everything comes from the open transit feeds published by **Roma Servizi per la 
 | `rome_rtgtfs_vehicle_positions_feed.pb` | vehicle positions | ~60 s |
 | `rome_rtgtfs_service_alerts_feed.pb` | service alerts | irregular |
 
-Attribution to Roma Servizi per la Mobilità is a condition of the licence. It appears in the site footer and on `/info`, and both must stay. This app never calls ATAC's or Probus's own backend.
+Attribution to Roma Servizi per la Mobilità is a condition of the licence. It appears in the site footer and on `/info`, and both must stay. The app talks to those feeds and to nothing else that is not listed here.
 
-One other third party is involved, and only for the journey planner: free-text place lookup goes to OpenStreetMap Nominatim. Their usage policy asks for an identifying User-Agent, so set `PROBUS_CONTACT` to an email or a repository URL before running this anywhere public. Set `PROBUS_GEOCODING=off` to disable the lookup entirely, in which case the planner still accepts stops and coordinates and only loses free-text addresses.
+One other third party is involved, only for the journey planner: free-text place lookup goes to OpenStreetMap Nominatim. Their usage policy asks for an identifying User-Agent, so set `PROBUS_CONTACT` to an email or a repository URL before running this anywhere public. `PROBUS_GEOCODING=off` disables the lookup entirely.
 
 ## Quick start
 
-Node 22+ and pnpm. Dependencies are pinned in `pnpm-lock.yaml`.
+Node 22 and pnpm 10 (`corepack enable` picks up the pinned version).
 
 ```bash
 pnpm install
-pnpm ingest   # downloads the static feed and builds data/gtfs.db
+pnpm ingest   # downloads the static feed and builds data/gtfs.db, ~20 s
 pnpm dev      # http://localhost:3000
 ```
 
-The ingest downloads a 42 MB zip and turns it into a ~390 MB SQLite database (`stop_times.txt` alone is 4.5 M rows and 214 MB). It takes about 20 s. If you already have the zip:
+The ingest downloads a 42 MB zip and turns it into a ~390 MB SQLite database (`stop_times.txt` alone is 4.5 M rows and 214 MB). If you already have the zip:
 
 ```bash
 pnpm ingest --from-file=/path/to/rome_static_gtfs.zip --db=data/gtfs.db
@@ -50,9 +64,15 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 curl -s 'localhost:3200/api/stops/nearby?lat=41.9008&lon=12.5013&radius=400'
 ```
 
-That builds the image, starts one container named `busfinder` and bind-mounts `./data` at `/app/data`. The image is ~300 MB and never ships any of the databases. On first boot, with no `gtfs.db` in `data/`, the entrypoint runs the ingest before the server starts listening, so the first boot takes a couple of minutes and later ones take about a second. `.env.example` documents every variable; `DEPLOY.md` covers the server side, TLS and the release pipeline.
+That builds the image, starts one container named `busfinder` and bind-mounts `./data` at `/app/data`. The image is ~300 MB and never ships any of the databases. On first boot, with no `gtfs.db` in `data/`, the entrypoint runs the ingest before the server starts listening, so the first boot takes a couple of minutes and later ones about a second. `.env.example` documents every variable.
 
 The container declares a `HEALTHCHECK` on `/api/alerts` with a 10 minute `start-period`, so the first-boot ingest is not counted as a failure. It runs as the unprivileged `node` user, and the entrypoint refuses to start if `/app/data` is not writable, because a read-only mount would otherwise boot fine and then fail every sync write with a 500.
+
+### Deploying
+
+`DEPLOY.md` covers the server side in two scripts. `release.sh` builds and pushes the image for the server's architecture and pins the tag. `deploy.sh` ships the configuration over SSH, pulls, waits for the container to become healthy, runs the full smoke test against the public URL, and rolls back to the previous image if any of that fails. Caddy in front provides HTTPS with automatic certificates. A `fly.toml` is included for Fly.io.
+
+HTTPS is not optional in production: `crypto.subtle` only exists in a secure context, and device sync switches itself off with an explanation over plain HTTP.
 
 ### How the image is built, and why
 
@@ -66,18 +86,6 @@ Four things in here are deliberate and easy to break:
 - `scripts/sync-schema.sql` has to be in the image. `src/lib/syncdb.ts` reads it at runtime to create `sync.db` on first use, and Next's server trace never sees it, so nothing else would notice it going missing.
 
 The Dockerfile guards all four: it boots `standalone/server.js` and waits for a real HTTP response in the build stage, runs `tsx scripts/ingest.ts --help` in the runtime stage to walk the ingest's whole import graph, and asserts the sync schema is present. Any of them failing fails the build instead of the container.
-
-## Deploying to Fly.io
-
-```bash
-fly launch --no-deploy   # review fly.toml, create the app
-fly volumes create probus_data --region fra --size 3
-fly deploy
-```
-
-`fly.toml` targets Frankfurt (`fra`), the closest Fly region to Rome with the full volume tier, and sizes the VM at 1 GB of memory: the ingest streams and parses `stop_times.txt` and builds several indexes before writing SQLite, which peaks well above Fly's default 256 MB.
-
-The volume is not optional and it is not a cache. It holds `sync.db`, the one piece of state in this system that cannot be rebuilt from anything, and `motion.db`, which can be rebuilt only by relearning traffic for weeks. Destroy the volume and every device that had turned on sync loses what was stored under its code. Only `gtfs.db` comes back on its own.
 
 ## The daily refresh
 
@@ -93,9 +101,6 @@ Verified behaviour:
 - The swap is atomic. Polling `stat` every 50 ms across a live refresh only ever observes the old size or the new one, never a partial file and never a missing one.
 - `refresh.lock` is created with `set -C`, so of three refreshes started at the same moment exactly one proceeds and the other two abort with exit 1.
 - `src/lib/db.ts` notices the new inode and reopens the database on the next request, so a refresh does not need a server restart. A client polling `/api/stops/nearby` five times a second through a live refresh saw 86 consecutive `200`s and correct data on both sides of the swap.
-- `sync.db` comes out of the refresh with the same inode it went in with. The ingest only ever writes inside the scratch directory, and only its `gtfs.db` is moved out. The script checks this at the end and exits non-zero if the sync store ever went missing across a refresh.
-
-**Caveat:** the lock is a plain file removed by an `EXIT` trap. If a refresh is `SIGKILL`ed (OOM, `docker kill`) the lock survives, and every later cron refresh aborts until someone deletes `/app/data/refresh.lock`. Watch for repeated `another refresh appears to be running` lines in `refresh.log`. The entrypoint handles the one case that would otherwise be unrecoverable: a lock left behind with no database at all used to make the container fail to boot forever, so it now clears that lock and re-ingests.
 
 ## Tests
 
@@ -108,7 +113,7 @@ pnpm typecheck
 
 They cover the parts that are pure logic and expensive to get wrong: every dictionary having the same shape as the Italian one and every parameterised string actually rendering in all 21 languages, CLDR plural categories (Polish few/many, Arabic dual, Romanian's `de` past 20), language-tag resolution including keys inherited from `Object.prototype`, the GTFS service day that rolls over at 04:00, and the polyline codec and snapping tolerance that decide whether a bus is drawn on the road or over a building.
 
-`.github/workflows/ci.yml` runs those three checks on every push and pull request: typecheck, tests, then a production build with no `data/*.db` present, which is also what proves nothing queries the database at build time. Dependency updates arrive weekly, grouped by ecosystem, from `.github/dependabot.yml`.
+`.github/workflows/ci.yml` runs those three checks on every push and pull request: typecheck, tests, then a production build with no `data/*.db` present, which is also what proves nothing queries the database at build time. A second workflow builds the Docker image whenever something that ships in it changes and checks that the native SQLite binding loads in the runtime image. CodeQL scans every pull request. Dependency updates arrive weekly, grouped by ecosystem, from `.github/dependabot.yml`.
 
 ## Smoke test
 
@@ -132,7 +137,7 @@ The sync checks write as well as read: they do a full round trip on a random `sy
 
 ## Architecture
 
-Three SQLite databases live side by side in `data/`, and the difference between them is the single most important thing to understand about deploying this. One is disposable, one is irreplaceable, one is expensive to lose.
+One Next.js process, three SQLite files, no other services. The difference between the three files is the single most important thing to understand about running this. One is disposable, one is irreplaceable, one is expensive to lose.
 
 `data/gtfs.db` is the static schedule: stops, routes, trips, stop times, shapes, service calendar. It is built by `scripts/ingest.ts`, opened read-only, and **thrown away and rebuilt every morning**. Nothing may ever be stored in it that you would miss.
 
@@ -168,9 +173,15 @@ Every stop page carries a live map with two modes: `approaching` shows only vehi
 - The server renders each stop, mode and 15 s clock tick once and caches the string, so many tabs on one stop cost one render.
 - Two sliding windows guard the endpoint, 120 requests a minute and 20 in any 5 s, so a client that has lost its interval cannot take the process down.
 
+Between polls, `src/components/map/motion.ts` projects each vehicle onto its line's shape and moves it forward at the speed learned for that line in that grid cell, so the marker keeps moving along the street rather than jumping every 30 s. A vehicle more than a few dozen metres from any shape is drawn where the GPS says it is and marked as diverted, because gluing it to the wrong street is the one surprise a rider should never get.
+
 ### Layout
 
-The app is mobile-first and stays that way, since the plan is to ship it wrapped as an Android app. From `lg` (1024 px) up it becomes a desktop app instead of a stretched phone: a persistent sidebar carries the brand, search and navigation, the top bar disappears, and the map pages go two-column with a sticky full-height map. `DESKTOP.md` is the contract for that layer and lists the shared tokens.
+Mobile-first, because it is used on the street, one-handed, with big tap targets and high contrast. From `lg` (1024 px) up it becomes a desktop app instead of a stretched phone: a persistent sidebar carries the brand, search and navigation, the top bar disappears, and the map pages go two-column with a sticky full-height map. `DESKTOP.md` is the contract for that layer and lists the shared tokens.
+
+### Languages
+
+Twenty-one dictionaries under `src/lib/i18n/`, all typed against the Italian one so a missing key is a compile error, not a blank label. Plurals go through `Intl.PluralRules` with real CLDR categories, so Polish gets its three forms and Arabic its dual. Arabic and Urdu flip the whole layout with `dir="rtl"` and logical CSS properties, and the pre-paint bootstrap resolves the browser's language the same way React does, so there is no flash of the wrong language and no hydration mismatch. Only Italian is in the main bundle; every other language is a chunk fetched on first use.
 
 ## Known limits
 
