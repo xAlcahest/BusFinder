@@ -1,6 +1,8 @@
 node_modules/
 .next/
 out/
+# Copied out of node_modules by scripts/copy-maplibre-worker.mjs on every build.
+public/maplibre/
 data/*.db
 # -wal, -shm, -journal: SQLite creates new ones as it pleases, so the rule
 # catches them all instead of listing them.

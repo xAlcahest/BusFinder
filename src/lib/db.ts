@@ -111,7 +111,8 @@ export function getDb(): Db {
 /** True when the database file exists and is non-empty. Never throws. */
 export function isDbReady(): boolean {
   try {
-    const stats = fs.statSync(dbPath());
+    // Turbopack would otherwise trace the whole project into the standalone output.
+    const stats = fs.statSync(/*turbopackIgnore: true*/ dbPath());
     return stats.isFile() && stats.size > 0;
   } catch {
     return false;

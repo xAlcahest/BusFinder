@@ -7,6 +7,7 @@ import {
   Map as MapLibreMap,
   Marker,
   NavigationControl,
+  setWorkerUrl,
 } from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -16,6 +17,10 @@ import { metresBetween } from "@/lib/pathmotion";
 
 import type { MotionMapViewProps, MotionProvider } from "./motion";
 import type { LatLon, MapMarker, MapMarkerKind, MapPath } from "./types";
+
+// Next never emits the worker's maplibre-gl-shared.mjs sibling, so the bundled
+// worker URL is unusable; scripts/copy-maplibre-worker.mjs puts both here.
+setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';

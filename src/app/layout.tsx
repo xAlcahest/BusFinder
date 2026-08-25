@@ -62,8 +62,15 @@ const BOOTSTRAP = `(function(){try{var raw=localStorage.getItem(${jsLiteral(
 )}.indexOf(lang)>=0?"rtl":"ltr";}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // globals.css sets scroll-behavior: smooth; Next 16 only suppresses it for
+  // route transitions when data-scroll-behavior is present.
   return (
-    <html lang={DEFAULT_LOCALE} dir="ltr" suppressHydrationWarning>
+    <html
+      lang={DEFAULT_LOCALE}
+      dir="ltr"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       {/* The left padding is the sidebar's lane; the token is 0 below lg, where
           the sidebar is a drawer over the page. */}
       <body className="min-h-dvh antialiased ps-[var(--shell-sidebar-w)]">

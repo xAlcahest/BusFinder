@@ -40,6 +40,13 @@ updates:
       # upgrade belongs in a deliberate PR, not an automatic one.
       - dependency-name: better-sqlite3
         update-types: ["version-update:semver-major"]
+      # TypeScript 7 ships no programmatic API, which Next needs to load
+      # next.config.ts and tsconfig; the move is a deliberate PR.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Types follow the runtime in the Dockerfile and CI, currently Node 22.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: "/"

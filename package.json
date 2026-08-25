@@ -10,23 +10,22 @@
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/copy-maplibre-worker.mjs && next dev",
+    "build": "node scripts/copy-maplibre-worker.mjs && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "lint": "next lint",
     "ingest": "tsx scripts/ingest.ts",
     "ingest:local": "tsx scripts/ingest.ts --from-file",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
-    "gtfs-realtime-bindings": "^1.1.1",
-    "maplibre-gl": "^5.6.0",
-    "next": "15.5.22",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "gtfs-realtime-bindings": "^2.2.0",
+    "maplibre-gl": "^6.5.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "yauzl": "^3.2.0"
   },
   "devDependencies": {
@@ -35,7 +34,7 @@
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@types/yauzl": "^2.10.3",
+    "@types/yauzl": "^3.4.0",
     "tailwindcss": "^4.1.11",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
