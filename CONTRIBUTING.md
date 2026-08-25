@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for looking. This file is the short version of how the project works;
-`README.md` has the architecture and `DEPLOY.md` the operations side.
+`docs/ARCHITECTURE.md` has the architecture, `docs/OPERATIONS.md` and `DEPLOY.md` the operations side.
 
 ## Before you start
 
