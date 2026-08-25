@@ -22,9 +22,16 @@ export function notFound(error: string, detail?: string): NextResponse<ApiError>
   return apiError(404, error, detail);
 }
 
+/** One log line, whatever the message carries: no newline from a request can forge a second entry. */
+export function logLine(value: unknown): string {
+  const text = value instanceof Error ? `${value.name}: ${value.message}` : String(value);
+  return text.replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ").slice(0, 2000);
+}
+
 /** Logs the real cause server-side and returns an opaque 500 to the client. */
 export function serverError(scope: string, cause: unknown): NextResponse<ApiError> {
-  console.error(`[api:${scope}]`, cause);
+  console.error(`[api:${logLine(scope)}] ${logLine(cause)}`);
+  if (cause instanceof Error && cause.stack !== undefined) console.error(logLine(cause.stack));
   return apiError(500, "Errore interno del server");
 }
 
