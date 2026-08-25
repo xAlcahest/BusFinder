@@ -9,6 +9,7 @@ import SkipLink from "@/components/SkipLink";
 import TopBar from "@/components/TopBar";
 import { LocaleProvider } from "@/lib/i18n";
 import { DEFAULT_LOCALE, LOCALE_ALIASES, LOCALES, RTL_LOCALES } from "@/lib/i18n/locale";
+import { jsLiteral } from "@/lib/inline-script";
 import { STORAGE_KEYS } from "@/lib/types";
 import "./globals.css";
 
@@ -48,15 +49,15 @@ export const viewport: Viewport = {
  * hydration. Getting `dir` right here matters: an Arabic reader would otherwise
  * see the whole layout jump sides once React mounts.
  */
-const BOOTSTRAP = `(function(){try{var raw=localStorage.getItem(${JSON.stringify(
+const BOOTSTRAP = `(function(){try{var raw=localStorage.getItem(${jsLiteral(
   STORAGE_KEYS.settings,
-)});var root=document.documentElement;var parsed=raw?JSON.parse(raw):null;var s=parsed&&typeof parsed==="object"?parsed:{};var theme=s.theme;if(theme==="dark"||theme==="light"){root.setAttribute("data-theme",theme);}else{root.removeAttribute("data-theme");}var known=${JSON.stringify(
+)});var root=document.documentElement;var parsed=raw?JSON.parse(raw):null;var s=parsed&&typeof parsed==="object"?parsed:{};var theme=s.theme;if(theme==="dark"||theme==="light"){root.setAttribute("data-theme",theme);}else{root.removeAttribute("data-theme");}var known=${jsLiteral(
   LOCALES,
-)};var alias=${JSON.stringify(
+)};var alias=${jsLiteral(
   LOCALE_ALIASES,
-)};var lang=s.language;if(known.indexOf(lang)<0){lang=null;var tags=(navigator.languages||[navigator.language||""]);for(var i=0;i<tags.length&&!lang;i++){var base=String(tags[i]).toLowerCase().split(/[-_]/)[0];if(known.indexOf(base)>=0)lang=base;else if(Object.prototype.hasOwnProperty.call(alias,base))lang=alias[base];}}lang=lang||${JSON.stringify(
+)};var lang=s.language;if(known.indexOf(lang)<0){lang=null;var tags=(navigator.languages||[navigator.language||""]);for(var i=0;i<tags.length&&!lang;i++){var base=String(tags[i]).toLowerCase().split(/[-_]/)[0];if(known.indexOf(base)>=0)lang=base;else if(Object.prototype.hasOwnProperty.call(alias,base))lang=alias[base];}}lang=lang||${jsLiteral(
   DEFAULT_LOCALE,
-)};root.lang=lang;root.dir=${JSON.stringify(
+)};root.lang=lang;root.dir=${jsLiteral(
   RTL_LOCALES,
 )}.indexOf(lang)>=0?"rtl":"ltr";}catch(e){}})();`;
 

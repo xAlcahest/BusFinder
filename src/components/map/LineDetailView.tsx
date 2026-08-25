@@ -62,8 +62,7 @@ function safeDecode(encoded: string | null): Array<[number, number]> | null {
   return clean.length > 1 ? clean : null;
 }
 
-function ageLabel(feedTimestamp: number | null, fetchedAt: number | null, t: Dictionary): string {
-  if (fetchedAt === null) return "";
+function ageLabel(feedTimestamp: number | null, fetchedAt: number, t: Dictionary): string {
   if (feedTimestamp !== null && feedTimestamp > 0) {
     return t.line.dataAt(formatClock(feedTimestamp));
   }
