@@ -1,5 +1,7 @@
 # BusFinder
 
+[![CI](https://github.com/xAlcahest/BusFinder/actions/workflows/ci.yml/badge.svg)](https://github.com/xAlcahest/BusFinder/actions/workflows/ci.yml) [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
+
 Live arrivals, timetables, line maps, service alerts and an A-to-B planner for Rome public transport, as a single Next.js app.
 
 It started as a web clone of the Android app "Probus Rome" and has since grown its own shape: a live vehicle map on every stop page, a desktop layout, and optional encrypted sync between devices.
@@ -44,18 +46,11 @@ pnpm ingest --from-file=/path/to/rome_static_gtfs.zip --db=data/gtfs.db
 ## Running with Docker
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+curl -s 'localhost:3200/api/stops/nearby?lat=41.9008&lon=12.5013&radius=400'
 ```
 
-That builds the image, starts one container on port 3000 and mounts a named volume at `/app/data`. The image is ~300 MB and never ships any of the databases. On first boot, with no `gtfs.db` on the volume, the entrypoint runs the ingest before the server starts listening, so the first boot takes a couple of minutes and later ones take about a second.
-
-To reuse a database you already built on the host, bind-mount its directory instead:
-
-```bash
-docker build -t probus-web .
-docker run -d --name probus -p 3000:3000 -v "$PWD/data:/app/data" probus-web
-curl -s 'localhost:3000/api/stops/nearby?lat=41.9008&lon=12.5013&radius=400'
-```
+That builds the image, starts one container named `busfinder` and bind-mounts `./data` at `/app/data`. The image is ~300 MB and never ships any of the databases. On first boot, with no `gtfs.db` in `data/`, the entrypoint runs the ingest before the server starts listening, so the first boot takes a couple of minutes and later ones take about a second. `.env.example` documents every variable; `DEPLOY.md` covers the server side, TLS and the release pipeline.
 
 The container declares a `HEALTHCHECK` on `/api/alerts` with a 10 minute `start-period`, so the first-boot ingest is not counted as a failure. It runs as the unprivileged `node` user, and the entrypoint refuses to start if `/app/data` is not writable, because a read-only mount would otherwise boot fine and then fail every sync write with a 500.
 
@@ -185,3 +180,15 @@ The app is mobile-first and stays that way, since the plan is to ship it wrapped
 - Night coverage is only as good as the static feed. A night line that is not in `rome_static_gtfs.zip` does not exist here either.
 - No fares, no ticket purchase, no ticket office locations.
 - Realtime coverage is not uniform. Plenty of lines have no AVM data at all, and those passages fall back to the timetable and are labelled as scheduled rather than live.
+
+## Contributing
+
+Issues and pull requests are welcome. `CONTRIBUTING.md` has the setup, the checks that run in CI, and the handful of names that must never change because users' data depends on them. Security problems go through private vulnerability reporting, see `SECURITY.md`.
+
+## Licence
+
+GNU AGPL-3.0, see `LICENSE`. You can run it, change it, redistribute it and build on it, commercially or not; if you distribute it or offer it to others over a network, the source of your version has to be available under the same licence. Anything else needs a separate licence from the author.
+
+"BusFinder" is the name of this project, not part of the licence. Forks are welcome to the code; please give yours its own name.
+
+The transit data is published by Roma Servizi per la Mobilità under its own terms, and the attribution in the footer and on `/info` is a condition of using it.

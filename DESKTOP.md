@@ -9,7 +9,8 @@ first-class, because the plan is to ship it wrapped as an Android app, so nothin
 about the phone experience may regress. Two configurations, both deliberate, with
 the centre of gravity on the large screen.
 
-This file is the shared contract. Several agents work in parallel against it.
+This file is the shared contract for that layer: read it before touching the
+shell or any page layout.
 
 ## Breakpoints
 
@@ -27,8 +28,8 @@ The sidebar becomes furniture at `lg`. That threshold already exists in
 
 ## Shared tokens (decided, not negotiable)
 
-The shell agent defines these in `globals.css`; everyone else consumes them and
-never hardcodes the values.
+They are defined once in `globals.css`; components consume them and never
+hardcode the values.
 
 As implemented in `globals.css`:
 
@@ -126,5 +127,6 @@ Desktop is not "the phone, bigger". Tighten it:
 - No horizontal page scrollbar at any width from 320 px to 2560 px.
 - Keyboard: focus order follows visual order in both configurations.
 - Use the design tokens in `globals.css`. If you need a new token, add it there
-  (shell agent owns that file) rather than hardcoding a value in a component.
-- Everything stays in Italian.
+  rather than hardcoding a value in a component.
+- Every user-facing string goes through the dictionaries in `src/lib/i18n/`,
+  in all 21 languages, and the layout has to hold in both text directions.

@@ -2,7 +2,7 @@
  * Builds data/gtfs.db from the Rome GTFS static feed.
  *
  *   pnpm ingest                     download the live zip and rebuild
- *   pnpm ingest -- --from-file      use the local development copy instead
+ *   pnpm ingest --from-file         use data/rome_static_gtfs.zip instead
  *   pnpm ingest -- --keep-zip       keep the downloaded zip in data/tmp
  *
  * stop_times.txt is 4.5M rows / 214 MB: it is streamed straight out of the zip
@@ -26,12 +26,11 @@ import { encodePolyline } from "../src/lib/polyline.js";
 
 const DEFAULT_URL = "https://romamobilita.it/sites/default/files/rome_static_gtfs.zip";
 
-/** Development fixture used by --from-file, overridable with GTFS_LOCAL_ZIP. */
-const FIXTURE_ZIP =
-  process.env.GTFS_LOCAL_ZIP ??
-  "/tmp/claude-1000/-home-alcahest-git-Probus/a76ecbe0-dbc6-4998-af0b-8460b1554a52/scratchpad/gtfs/static.zip";
-
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+/** Local copy used by a bare --from-file, overridable with GTFS_LOCAL_ZIP. */
+const FIXTURE_ZIP =
+  process.env.GTFS_LOCAL_ZIP ?? path.join(SCRIPT_DIR, "..", "data", "rome_static_gtfs.zip");
 const DOWNLOAD_TIMEOUT_MS = 180_000;
 const PROGRESS_EVERY = 1_000_000;
 
