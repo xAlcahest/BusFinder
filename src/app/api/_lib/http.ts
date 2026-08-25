@@ -25,7 +25,12 @@ export function notFound(error: string, detail?: string): NextResponse<ApiError>
 /** One log line, whatever the message carries: no newline from a request can forge a second entry. */
 export function logLine(value: unknown): string {
   const text = value instanceof Error ? `${value.name}: ${value.message}` : String(value);
-  return text.replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ").slice(0, 2000);
+  // Newlines dropped outright, in the one form CodeQL recognises as a sanitizer.
+  return text
+    .replace(/\n/g, "")
+    .replace(/\r/g, "")
+    .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ")
+    .slice(0, 2000);
 }
 
 /** Logs the real cause server-side and returns an opaque 500 to the client. */
